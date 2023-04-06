@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_reader/utils.dart';
 
 void main() => runApp(const MyApp());
 
@@ -12,13 +13,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Utils();
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
     return MaterialApp(
-      title: 'Path Provider',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(),
+      title: 'title',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const SplashPage(),
     );
   }
 }
@@ -31,28 +31,43 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  var cid = 615;
+  var pid = 0;
   @override
   Widget build(BuildContext context) {
-    
     ff();
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 248, 231, 193),
       body: Container(
         alignment: Alignment.topCenter,
         child: Image.file(
-          File('/storage/emulated/0/Android/data/com.example.phone_reader/files/book_img/531-1.webp'),
+          File('${u.extDir.path}/img_book/$cid/1.webp'),
         ),
       ),
     );
   }
 
   ff() async {
-    // final j = Permission.storage.request();
-
-    final a = Directory('/storage/emulated/0/Android/data/com.example.phone_reader/files/book_img').listSync(recursive: true);
-    // final b = File('/storage/emulated/0/xml/531-2.webp').re;
+    final a = Directory('${u.extDir.path}/img_book/615').listSync();
     print(a.length);
     for (final i in a) {
       print(i);
     }
+    print(u.extDir);
+  }
+}
+
+class SplashPage extends StatelessWidget {
+  const SplashPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    Utils();
+    Future.delayed(const Duration(seconds: 1), () {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage()));
+    });
+    return const Center(
+      child: FlutterLogo(),
+    );
   }
 }

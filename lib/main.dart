@@ -2,8 +2,11 @@
 
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+
 import 'package:phone_reader/utils.dart';
 
 void main() => runApp(const MyApp());
@@ -23,39 +26,66 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+class MyPage extends StatelessWidget {
+  const MyPage(this.cid, this.pid, {super.key});
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  final int cid;
+  final int pid;
 
-class _MyHomePageState extends State<MyHomePage> {
-  var cid = 615;
-  var pid = 0;
   @override
   Widget build(BuildContext context) {
-    ff();
+    final list = Directory('${u.extDir.path}/img_book/$cid').listSync();
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 248, 231, 193),
-      body: Container(
-        alignment: Alignment.topCenter,
-        child: Image.file(
-          File('${u.extDir.path}/img_book/$cid/1.webp'),
-        ),
+      body: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const PageScrollPhysics(),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          return index < list.length ? Image.file(File(list[index].path)) : Container();
+        },
       ),
     );
   }
 
-  ff() async {
-    final a = Directory('${u.extDir.path}/img_book/615').listSync();
-    print(a.length);
-    for (final i in a) {
-      print(i);
-    }
-    print(u.extDir);
-  }
+  // ff() {
+  //   Navigator.pushReplacement(
+  //     context,
+  //     CupertinoPageRoute(
+  //       builder: (context) {
+  //         if (pid + 1 < list.length) {
+  //           return MyPage(cid, pid + 1);
+  //         } else {
+  //           return MyPage(cid + 1, 0);
+  //         }
+  //       },
+  //     ),
+  //   );
+  // }
 }
+
+// class MyMove extends StatefulWidget {
+//   const MyMove({super.key});
+
+//   @override
+//   State<MyMove> createState() => _MyMoveState();
+// }
+
+// class _MyMoveState extends State<MyMove> {
+//   double _position = 0;
+//   double _panEndPosition = 0;
+//   double _panStartPosition = 0;
+//   double _animateToPosition = 0;
+//   double _basePosition = 0;
+
+//   AnimationController _controller;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return
+//   }
+// }
 
 class SplashPage extends StatelessWidget {
   const SplashPage({Key? key}) : super(key: key);
@@ -64,7 +94,7 @@ class SplashPage extends StatelessWidget {
   Widget build(BuildContext context) {
     Utils();
     Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage()));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyPage(615, 0)));
     });
     return const Center(
       child: FlutterLogo(),

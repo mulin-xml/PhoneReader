@@ -2,9 +2,7 @@
 
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'package:phone_reader/utils.dart';
@@ -26,66 +24,81 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyPage extends StatelessWidget {
-  const MyPage(this.cid, this.pid, {super.key});
+class MyPage extends StatefulWidget {
+  const MyPage({super.key});
 
-  final int cid;
-  final int pid;
+  @override
+  State<MyPage> createState() => _MyPageState();
+}
+
+class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
+  late AnimationController controller;
+  int cid = 1506;
+  int pid = 5;
+
+  double anchorX = 0;
+  double currentX = 0;
+  double movingDir = 0;
+  final List<FileSystemEntity> list = [];
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        movingDir = 0;
+        if (status == AnimationStatus.completed) {
+          pid += 1;
+        }
+        setState(() {});
+      }
+    });
+    list.clear();
+    list.addAll(Directory('${u.extDir.path}/1506').listSync());
+  }
 
   @override
   Widget build(BuildContext context) {
-    final list = Directory('${u.extDir.path}/img_book/$cid').listSync();
-
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 231, 193),
-      body: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const PageScrollPhysics(),
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          return index < list.length ? Image.file(File(list[index].path)) : Container();
-        },
-      ),
+    return GestureDetector(
+      onTap: () {},
+      onHorizontalDragUpdate: (details) {
+        currentX = details.globalPosition.dx;
+        // controller.value = 1 - details.globalPosition.dx / context.size!.width;
+        controller.value = 1 - (currentX - anchorX) / context.size!.width;
+      },
+      onHorizontalDragDown: (details) {
+        anchorX = details.globalPosition.dx;
+      },
+      onHorizontalDragStart: (details) {
+        setState(() => movingDir = details.globalPosition.dx - anchorX);
+      },
+      onHorizontalDragEnd: (details) {
+        currentX < anchorX ? controller.forward() : controller.reverse();
+      },
+      child: movingDir != 0 ? moveWidget() : Image.file(File(list[pid].path)),
     );
   }
 
-  // ff() {
-  //   Navigator.pushReplacement(
-  //     context,
-  //     CupertinoPageRoute(
-  //       builder: (context) {
-  //         if (pid + 1 < list.length) {
-  //           return MyPage(cid, pid + 1);
-  //         } else {
-  //           return MyPage(cid + 1, 0);
-  //         }
-  //       },
-  //     ),
-  //   );
-  // }
+  Widget moveWidget() {
+    return Stack(children: [
+      Image.file(File(list[pid + 1].path)),
+      SlideTransition(
+        position: Tween<Offset>(end: const Offset(-1, 0), begin: Offset.zero).animate(controller),
+        child: Image.file(File(list[pid].path)),
+      ),
+    ]);
+  }
+
+  next() {
+    if (pid + 1 < list.length) {
+      return list[pid + 1].path;
+    } else {
+      final l = Directory('${u.extDir.path}/1506').listSync();
+      return l[pid + 1].path;
+    }
+  }
 }
-
-// class MyMove extends StatefulWidget {
-//   const MyMove({super.key});
-
-//   @override
-//   State<MyMove> createState() => _MyMoveState();
-// }
-
-// class _MyMoveState extends State<MyMove> {
-//   double _position = 0;
-//   double _panEndPosition = 0;
-//   double _panStartPosition = 0;
-//   double _animateToPosition = 0;
-//   double _basePosition = 0;
-
-//   AnimationController _controller;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return
-//   }
-// }
 
 class SplashPage extends StatelessWidget {
   const SplashPage({Key? key}) : super(key: key);
@@ -94,10 +107,10 @@ class SplashPage extends StatelessWidget {
   Widget build(BuildContext context) {
     Utils();
     Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyPage(615, 0)));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyPage()));
     });
-    return const Center(
-      child: FlutterLogo(),
+    return const Scaffold(
+      body: Center(child: FlutterLogo()),
     );
   }
 }

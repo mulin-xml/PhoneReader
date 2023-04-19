@@ -39,6 +39,7 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
   double anchorX = 0;
   double currentX = 0;
   double movingDir = 0;
+  bool onListen = false;
   final List<FileSystemEntity> list = [];
 
   @override
@@ -46,12 +47,15 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
     super.initState();
     controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        movingDir = 0;
+      if (onListen) {
         if (status == AnimationStatus.completed) {
           pid += 1;
+          // setState(() => movingDir = 0);
+        } else if (status == AnimationStatus.dismissed) {
+          //
         }
-        setState(() {});
+        onListen = false;
+        setState(() => movingDir = 0);
       }
     });
     list.clear();
@@ -64,28 +68,34 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
       onTap: () {},
       onHorizontalDragUpdate: (details) {
         currentX = details.globalPosition.dx;
-        // controller.value = 1 - details.globalPosition.dx / context.size!.width;
-        controller.value = 1 - (currentX - anchorX) / context.size!.width;
+        if (movingDir.isNegative) {
+          controller.value = (anchorX - currentX) / context.size!.width;
+        } else {
+          controller.value = 1 - details.globalPosition.dx / context.size!.width;
+        }
       },
       onHorizontalDragDown: (details) {
         anchorX = details.globalPosition.dx;
       },
       onHorizontalDragStart: (details) {
+        print('s');
         setState(() => movingDir = details.globalPosition.dx - anchorX);
       },
       onHorizontalDragEnd: (details) {
-        currentX < anchorX ? controller.forward() : controller.reverse();
+        onListen = true;
+        ((currentX - anchorX) * movingDir).isNegative ? controller.reverse() : controller.forward();
       },
       child: movingDir != 0 ? moveWidget() : Image.file(File(list[pid].path)),
     );
   }
 
   Widget moveWidget() {
+    final nd = movingDir.isNegative ? pid : pid - 1;
     return Stack(children: [
-      Image.file(File(list[pid + 1].path)),
+      Image.file(File(list[nd + 1].path)),
       SlideTransition(
-        position: Tween<Offset>(end: const Offset(-1, 0), begin: Offset.zero).animate(controller),
-        child: Image.file(File(list[pid].path)),
+        position: Tween<Offset>(end: Offset(movingDir.sign, 0), begin: Offset.zero).animate(controller),
+        child: Image.file(File(list[nd].path)),
       ),
     ]);
   }

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:phone_reader/page_image.dart';
 import 'package:phone_reader/utils.dart';
 
 void main() => runApp(const MyApp());
@@ -51,41 +52,6 @@ class BasePage extends StatelessWidget {
   }
 }
 
-class Loader {
-  Loader.withList(this.cid, this.pid, this.list) {
-    if (pid.isNegative) {
-      pid += list.length;
-    }
-  }
-  Loader.withoutList(this.cid, this.pid) : list = Directory('${u.extDir.path}/$cid').existsSync() ? Directory('${u.extDir.path}/$cid').listSync() : [] {
-    if (pid.isNegative) {
-      pid += list.length;
-    }
-  }
-
-  final List<FileSystemEntity> list;
-  final int cid;
-  int pid;
-
-  Loader next() {
-    if (pid + 1 < list.length) {
-      return Loader.withList(cid, pid + 1, list);
-    } else {
-      return Loader.withoutList(cid + 1, 0);
-    }
-  }
-
-  Loader last() {
-    if (pid > 0) {
-      return Loader.withList(cid, pid - 1, list);
-    } else {
-      return Loader.withoutList(cid - 1, -1);
-    }
-  }
-
-  Widget get widget => pid < list.length ? Image.file(File(list[pid].path)) : const Center(child: Text('No txt.'));
-}
-
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
 
@@ -93,10 +59,10 @@ class MyPage extends StatefulWidget {
   State<MyPage> createState() => _MyPageState();
 }
 
-class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
-  late AnimationController controller;
-  final t1 = Tween<Offset>(begin: Offset.zero, end: const Offset(-1, 0));
-  late Loader page;
+class _MyPageState extends State<MyPage> with TickerProviderStateMixin {
+  late AnimationController controller1, controller2;
+  late PageImgCache lc;
+
   double anchorX = 0;
   double currentX = 0;
   double movingDir = 0;
@@ -104,16 +70,13 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    page = Loader.withoutList(u.sp.getInt('cid') ?? 1589, u.sp.getInt('pid') ?? 0);
-    controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        page = movingDir.isNegative ? page.next() : page.last();
-        u.sp.setInt('cid', page.cid);
-        u.sp.setInt('pid', page.pid);
-        setState(() => movingDir = 0);
-      } 
-    });
+    final cid = u.sp.getInt('cid') ?? 1589;
+    final pid = u.sp.getInt('pid') ?? 0;
+    lc = PageImgCache(PageImg(cid, pid, Directory('${u.extDir.path}/$cid').listSync()));
+    controller1 = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    controller1.addStatusListener(listener);
+    controller2 = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    controller2.addStatusListener(listener);
   }
 
   @override
@@ -121,44 +84,53 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        controller.reset();
-        setState(() => movingDir = -1);
-        controller.forward();
+        movingDir = -1;
+        controller1.forward();
       },
       onHorizontalDragUpdate: (details) {
         currentX = details.globalPosition.dx;
         if (movingDir.isNegative) {
-          controller.value = (anchorX - currentX) / context.size!.width;
+          controller1.value = (anchorX - currentX) / context.size!.width;
         } else {
-          controller.value = currentX / context.size!.width;
+          controller2.value = currentX / context.size!.width;
         }
       },
       onHorizontalDragDown: (details) {
         anchorX = details.globalPosition.dx;
       },
       onHorizontalDragStart: (details) {
-        print('s');
-        setState(() => movingDir = details.globalPosition.dx - anchorX);
+        movingDir = details.globalPosition.dx - anchorX;
       },
       onHorizontalDragEnd: (details) {
-        ((currentX - anchorX) * movingDir).isNegative ? controller.reverse() : controller.forward();
+        if (movingDir.isNegative) {
+          currentX > anchorX ? controller1.reverse() : controller1.forward();
+        } else {
+          currentX < anchorX ? controller2.reverse() : controller2.forward();
+        }
       },
       child: Column(children: [
-        movingDir != 0 ? moveWidget() : page.widget,
-        Expanded(child: Text('${page.cid}  ${page.pid}')),
+        Stack(children: [
+          lc.next?.widget ?? Container(color: Colors.red),
+          SlideTransition(
+            position: Tween<Offset>(begin: Offset.zero, end: const Offset(-1, 0)).animate(controller1),
+            child: lc.current.widget,
+          ),
+          SlideTransition(
+            position: Tween<Offset>(end: Offset.zero, begin: const Offset(-1, 0)).animate(controller2),
+            child: lc.last?.widget ?? Container(color: Colors.red),
+          ),
+        ]),
+        Expanded(child: Text('${lc.current.cid}  ${lc.current.pid + 1}/${lc.current.list.length}')),
       ]),
     );
   }
 
-  Widget moveWidget() {
-    final down = movingDir.isNegative ? page.next() : page;
-    final up = movingDir.isNegative ? page : page.last();
-    return Stack(children: [
-      down.widget,
-      SlideTransition(
-        position: movingDir.isNegative ? t1.animate(controller) : ReverseTween(t1).animate(controller),
-        child: up.widget,
-      ),
-    ]);
+  listener(status) {
+    if (status == AnimationStatus.completed) {
+      movingDir.isNegative ? lc.forward() : lc.reverse();
+      controller1.reset();
+      controller2.reset();
+      setState(() => movingDir = 0);
+    }
   }
 }

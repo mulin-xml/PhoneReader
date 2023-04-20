@@ -24,6 +24,68 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class SplashPage extends StatelessWidget {
+  const SplashPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    Utils();
+    Future.delayed(const Duration(seconds: 1), () {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const BasePage()));
+    });
+    return const Scaffold(
+      body: Center(child: FlutterLogo()),
+    );
+  }
+}
+
+class BasePage extends StatelessWidget {
+  const BasePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color.fromARGB(255, 248, 231, 193),
+      body: MyPage(),
+    );
+  }
+}
+
+class Loader {
+  Loader.withList(this.cid, this.pid, this.list) {
+    if (pid.isNegative) {
+      pid += list.length;
+    }
+  }
+  Loader.withoutList(this.cid, this.pid) : list = Directory('${u.extDir.path}/$cid').existsSync() ? Directory('${u.extDir.path}/$cid').listSync() : [] {
+    if (pid.isNegative) {
+      pid += list.length;
+    }
+  }
+
+  final List<FileSystemEntity> list;
+  final int cid;
+  int pid;
+
+  Loader next() {
+    if (pid + 1 < list.length) {
+      return Loader.withList(cid, pid + 1, list);
+    } else {
+      return Loader.withoutList(cid + 1, 0);
+    }
+  }
+
+  Loader last() {
+    if (pid > 0) {
+      return Loader.withList(cid, pid - 1, list);
+    } else {
+      return Loader.withoutList(cid - 1, -1);
+    }
+  }
+
+  Widget get widget => pid < list.length ? Image.file(File(list[pid].path)) : const Center(child: Text('No txt.'));
+}
+
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
 
@@ -33,45 +95,42 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
   late AnimationController controller;
-  int cid = 1506;
-  int pid = 5;
-
+  final t1 = Tween<Offset>(begin: Offset.zero, end: const Offset(-1, 0));
+  late Loader page;
   double anchorX = 0;
   double currentX = 0;
   double movingDir = 0;
-  bool onListen = false;
-  final List<FileSystemEntity> list = [];
 
   @override
   void initState() {
     super.initState();
+    page = Loader.withoutList(u.sp.getInt('cid') ?? 1589, u.sp.getInt('pid') ?? 0);
     controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
-      if (onListen) {
-        if (status == AnimationStatus.completed) {
-          pid += 1;
-          // setState(() => movingDir = 0);
-        } else if (status == AnimationStatus.dismissed) {
-          //
-        }
-        onListen = false;
+      if (status == AnimationStatus.completed) {
+        page = movingDir.isNegative ? page.next() : page.last();
+        u.sp.setInt('cid', page.cid);
+        u.sp.setInt('pid', page.pid);
         setState(() => movingDir = 0);
-      }
+      } 
     });
-    list.clear();
-    list.addAll(Directory('${u.extDir.path}/1506').listSync());
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        controller.reset();
+        setState(() => movingDir = -1);
+        controller.forward();
+      },
       onHorizontalDragUpdate: (details) {
         currentX = details.globalPosition.dx;
         if (movingDir.isNegative) {
           controller.value = (anchorX - currentX) / context.size!.width;
         } else {
-          controller.value = 1 - details.globalPosition.dx / context.size!.width;
+          controller.value = currentX / context.size!.width;
         }
       },
       onHorizontalDragDown: (details) {
@@ -82,45 +141,24 @@ class _MyPageState extends State<MyPage> with SingleTickerProviderStateMixin {
         setState(() => movingDir = details.globalPosition.dx - anchorX);
       },
       onHorizontalDragEnd: (details) {
-        onListen = true;
         ((currentX - anchorX) * movingDir).isNegative ? controller.reverse() : controller.forward();
       },
-      child: movingDir != 0 ? moveWidget() : Image.file(File(list[pid].path)),
+      child: Column(children: [
+        movingDir != 0 ? moveWidget() : page.widget,
+        Expanded(child: Text('${page.cid}  ${page.pid}')),
+      ]),
     );
   }
 
   Widget moveWidget() {
-    final nd = movingDir.isNegative ? pid : pid - 1;
+    final down = movingDir.isNegative ? page.next() : page;
+    final up = movingDir.isNegative ? page : page.last();
     return Stack(children: [
-      Image.file(File(list[nd + 1].path)),
+      down.widget,
       SlideTransition(
-        position: Tween<Offset>(end: Offset(movingDir.sign, 0), begin: Offset.zero).animate(controller),
-        child: Image.file(File(list[nd].path)),
+        position: movingDir.isNegative ? t1.animate(controller) : ReverseTween(t1).animate(controller),
+        child: up.widget,
       ),
     ]);
-  }
-
-  next() {
-    if (pid + 1 < list.length) {
-      return list[pid + 1].path;
-    } else {
-      final l = Directory('${u.extDir.path}/1506').listSync();
-      return l[pid + 1].path;
-    }
-  }
-}
-
-class SplashPage extends StatelessWidget {
-  const SplashPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    Utils();
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyPage()));
-    });
-    return const Scaffold(
-      body: Center(child: FlutterLogo()),
-    );
   }
 }

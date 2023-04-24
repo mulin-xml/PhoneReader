@@ -70,9 +70,11 @@ class _MyPageState extends State<MyPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    final cid = u.sp.getInt('cid') ?? 1589;
+    final c = u.menuList.indexOf(u.sp.getString('cName') ?? u.menuList.first);
+    final cid = c.isNegative ? 0 : c;
     final pid = u.sp.getInt('pid') ?? 0;
-    lc = PageImgCache(PageImg(cid, pid, Directory('${u.extDir.path}/$cid').listSync()));
+    lc = PageImgCache(PageImg(cid, pid, Directory('${u.extDir.path}/${u.menuList[cid]}').listSync()));
+
     controller1 = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller1.addStatusListener(listener);
     controller2 = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
@@ -120,7 +122,7 @@ class _MyPageState extends State<MyPage> with TickerProviderStateMixin {
             child: lc.last?.widget ?? Container(color: Colors.red),
           ),
         ]),
-        Expanded(child: Text('${lc.current.cid}  ${lc.current.pid + 1}/${lc.current.list.length}')),
+        Expanded(child: Text('${u.menuList[lc.current.cid]}  ${lc.current.pid + 1}/${lc.current.list.length}')),
       ]),
     );
   }

@@ -35,34 +35,35 @@ class PageImgCache {
 
   _save() {
     u.sp.setInt('cid', current.cid);
+    u.sp.setString('cName', u.menuList[current.cid]);
     u.sp.setInt('pid', current.pid);
   }
 }
 
 class PageImg {
-  PageImg(this.cid, this.pid, this.list);
+  PageImg(this.cid, this.pid, this.list) {
+    list.sort((a, b) => a.path.compareTo(b.path));
+  }
 
   final List<FileSystemEntity> list;
   final int cid;
   final int pid;
 
   PageImg? next() {
-    final n = Directory('${u.extDir.path}/${cid + 1}');
     if (pid + 1 < list.length) {
       return PageImg(cid, pid + 1, list);
-    } else if (n.existsSync()) {
-      return PageImg(cid + 1, 0, n.listSync());
+    } else if (cid + 1 < u.menuList.length) {
+      return PageImg(cid + 1, 0, Directory('${u.extDir.path}/${u.menuList[cid + 1]}').listSync());
     } else {
       return null;
     }
   }
 
   PageImg? last() {
-    final l = Directory('${u.extDir.path}/${cid - 1}');
     if (pid > 0) {
       return PageImg(cid, pid - 1, list);
-    } else if (l.existsSync()) {
-      final ll = l.listSync();
+    } else if (cid > 0) {
+      final ll = Directory('${u.extDir.path}/${u.menuList[cid - 1]}').listSync();
       return PageImg(cid - 1, ll.length - 1, ll);
     } else {
       return null;

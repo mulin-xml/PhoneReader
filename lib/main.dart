@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Utils();
+    // Utils();
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
     return MaterialApp(
       title: 'title',
@@ -30,10 +30,13 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Utils();
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const BasePage()));
-    });
+    u.initAsync().then(
+      (value) {
+        if (value) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const BasePage()));
+        }
+      },
+    );
     return const Scaffold(
       body: Center(child: FlutterLogo()),
     );
@@ -122,7 +125,7 @@ class _MyPageState extends State<MyPage> with TickerProviderStateMixin {
             child: lc.last?.widget ?? Container(color: Colors.red),
           ),
         ]),
-        Expanded(child: Text('${u.menuList[lc.current.cid]}  ${lc.current.pid + 1}/${lc.current.list.length}')),
+        Expanded(child: Text('${u.menuList[lc.current.cid]}  ${lc.current.pid + 1}/${lc.current.list.length}  ${u.menuList.length - lc.current.cid - 1}')),
       ]),
     );
   }

@@ -10,19 +10,20 @@ class Utils {
   static final _instance = Utils._internal();
   factory Utils() => getInstance();
   Utils._internal() {
-    _initAsync();
+    // _initAsync();
   }
 
   Directory? _extDir;
   SharedPreferences? _sharedPreferences;
   List<String> menuList = [];
 
-  _initAsync() async {
+  Future<bool> initAsync() async {
     _sharedPreferences = await SharedPreferences.getInstance();
     _extDir = await getExternalStorageDirectory();
     print('Utils prepare ready.');
     menuList = Directory(u.extDir.path).listSync().map((e) => e.path.split('/').last).toList()..sort();
     print(menuList);
+    return true;
   }
 
   SharedPreferences get sp => _sharedPreferences!;

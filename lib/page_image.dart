@@ -17,6 +17,7 @@ class PageImgCache {
 
   forward() {
     if (next != null) {
+      last?.delete();
       last = current;
       current = next!;
       next = next?.next();
@@ -49,6 +50,13 @@ class PageImg {
   final int cid;
   final int pid;
 
+  delete() {
+    final d = Directory('${u.extDir.path}/${u.menuList[cid]}');
+    if (d.existsSync()) {
+      d.delete(recursive: true);
+    }
+  }
+
   PageImg? next() {
     if (pid + 1 < list.length) {
       return PageImg(cid, pid + 1, list);
@@ -62,7 +70,7 @@ class PageImg {
   PageImg? last() {
     if (pid > 0) {
       return PageImg(cid, pid - 1, list);
-    } else if (cid > 0) {
+    } else if (cid > 0 && Directory('${u.extDir.path}/${u.menuList[cid - 1]}').existsSync()) {
       final ll = Directory('${u.extDir.path}/${u.menuList[cid - 1]}').listSync();
       return PageImg(cid - 1, ll.length - 1, ll);
     } else {
@@ -71,6 +79,14 @@ class PageImg {
   }
 
   Widget get widget {
-    return pid < list.length ? Image.file(File(list[pid].path)) : Container(height: 500, alignment: Alignment.center, child: const Text('Error'));
+    final error = Center(
+      child: Container(
+        height: 500,
+        width: 500,
+        color: Colors.red,
+        child: const Text('Error', textScaleFactor: 2),
+      ),
+    );
+    return pid < list.length ? Image.file(File(list[pid].path)) : error;
   }
 }

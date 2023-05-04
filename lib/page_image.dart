@@ -17,7 +17,6 @@ class PageImgCache {
 
   forward() {
     if (next != null) {
-      last?.delete();
       last = current;
       current = next!;
       next = next?.next();
